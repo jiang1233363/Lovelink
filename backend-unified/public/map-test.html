@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>高德地图诊断测试</title>
+    <script type="text/javascript">
+        window._AMapSecurityConfig = {
+            securityJsCode: '1dafb16f35c04b448ede6a2b70d3e60e'
+        }
+    </script>
+    <script type="text/javascript" src="https://webapi.amap.com/maps?v=2.0&key=564ea4fd2fbe1e12d6b4595d25433699"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+        }
+        #container {
+            width: 100%;
+            height: 600px;
+            border: 2px solid #333;
+            border-radius: 10px;
+        }
+        .info {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f0f0f0;
+            border-radius: 5px;
+        }
+        .status {
+            margin: 5px 0;
+        }
+        .success {
+            color: green;
+        }
+        .error {
+            color: red;
+        }
+        h1 {
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <h1>🗺️ 高德地图诊断测试</h1>
+    <div class="info">
+        <h3>检测结果：</h3>
+        <div id="status"></div>
+    </div>
+    <div id="container"></div>
+    
+    <script>
+        const statusDiv = document.getElementById('status');
+        
+        function log(message, isError = false) {
+            const p = document.createElement('div');
+            p.className = 'status ' + (isError ? 'error' : 'success');
+            p.textContent = message;
+            statusDiv.appendChild(p);
+            console.log(message);
+        }
+        
+        // 1. 检查AMap是否加载
+        if (typeof AMap === 'undefined') {
+            log('❌ 高德地图API未加载', true);
+        } else {
+            log('✅ 高德地图API已加载');
+            log(`   版本: ${AMap.version}`);
+        }
+        
+        // 2. 创建地图
+        try {
+            log('🔨 开始创建地图实例...');
+            
+            const map = new AMap.Map('container', {
+                zoom: 12,
+                center: [116.397428, 39.90923], // 北京天安门
+                resizeEnable: true
+            });
+            
+            log('✅ 地图实例创建成功');
+            
+            // 3. 监听地图事件
+            map.on('complete', function() {
+                log('✅ 地图加载完成事件触发');
+                log(`   当前中心点: ${map.getCenter()}`);
+                log(`   当前缩放级别: ${map.getZoom()}`);
+                
+                // 检查图层
+                setTimeout(() => {
+                    const layers = map.getLayers();
+                    log(`   地图图层数量: ${layers ? layers.length : 0}`);
+                    
+                    if (!layers || layers.length === 0) {
+                        log('⚠️ 警告：地图图层为空，瓦片可能未加载', true);
+                        log('   可能原因：', true);
+                        log('   1. 网络问题（检查防火墙/代理）', true);
+                        log('   2. API配额用完（检查高德控制台）', true);
+                        log('   3. 安全密钥配置错误', true);
+                    } else {
+                        log('✅ 地图图层加载正常');
+                    }
+                }, 2000);
+            });
+            
+            map.on('error', function(error) {
+                log(`❌ 地图错误: ${JSON.stringify(error)}`, true);
+            });
+            
+            // 4. 添加标记测试
+            setTimeout(() => {
+                const marker = new AMap.Marker({
+                    position: [116.397428, 39.90923],
+                    title: '测试标记'
+                });
+                map.add(marker);
+                log('✅ 添加标记成功');
+            }, 1000);
+            
+        } catch (error) {
+            log(`❌ 创建地图失败: ${error.message}`, true);
+            console.error(error);
+        }
+        
+        // 5. 检查网络请求
+        log('📡 监听网络请求...');
+        const originalFetch = window.fetch;
+        window.fetch = function(...args) {
+            if (args[0] && args[0].includes('amap')) {
+                log(`   网络请求: ${args[0].substring(0, 80)}...`);
+            }
+            return originalFetch.apply(this, arguments)
+                .then(response => {
+                    if (args[0] && args[0].includes('amap')) {
+                        if (response.ok) {
+                            log(`   ✅ 请求成功: ${response.status}`);
+                        } else {
+                            log(`   ❌ 请求失败: ${response.status}`, true);
+                        }
+                    }
+                    return response;
+                })
+                .catch(error => {
+                    log(`   ❌ 网络错误: ${error.message}`, true);
+                    throw error;
+                });
+        };
+    </script>
+</body>
+</html>
+
+
+
+
+
